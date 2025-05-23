@@ -1,0 +1,105 @@
+## GraphQL with Express
+
+@apollo/server provides a middelware to use GraphQL with an express server.
+
+```javascript
+import cors from 'cors';
+import express from 'express';
+import { expressMiddleware } from '@apollo/server/express4';
+import { ApolloServer } from '@apollo/server';
+
+import { authMiddleware, handleLogin } from './auth.js';
+import { readFile } from 'node:fs/promises';
+import { resolvers } from './resolvers.js';
+
+const PORT = 9000;
+
+const app = express();
+app.use(cors(), express.json(), authMiddleware);
+
+app.post('/login', handleLogin);
+
+// Start the Appollo Server
+const typeDefs = await readFile('./schema.graphql', 'utf8')
+const apolloServer = new ApolloServer({ typeDefs, resolvers });
+await apolloServer.start();
+
+// Use express middleware to handle GraphQL requests
+app.use('/graphql', expressMiddleware(apolloServer));
+
+// Start express server
+app.listen({ port: PORT }, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+```
+
+## Creating Schema
+
+```graphql
+type Query {
+    """ Get all jobs posted to the board """
+    jobs: [Job!]
+    job(id: ID!): Job
+    company(id: ID!): Company
+}
+
+""" Represent a company that posted the job """
+type Company {
+    id: ID!
+    name: String!
+    description: String
+    jobs: [Job!]!
+}
+
+""" Represents a job posted to the board """
+type Job {
+    id: ID!
+    """ The __date__ the job was posted in ISO-8601 format. Eg: `2025-05-23` """
+    date: String!
+    title: String!
+    company: Company!
+    description: String
+}
+```
+
+NOTE: Triple quote comments i.e. description comments help describe the schema at the code level as well as in the GraphQL client interface / sandbox / playround.
+
+### Creating resolvers
+
+```javascript
+import { getJob, getJobs, getJobsByCompany } from "./db/jobs.js";
+import { getCompany } from "./db/companies.js";
+
+export const resolvers = {
+    Query: {
+        jobs: () => getJobs(),
+        // job: (_root, args) => getJob(args.id)
+        job: (_root, { id }) => getJob(id),
+        company: (_root, { id }) => getCompany(id)
+    },
+    Job: {
+        // The first argument to a "field resolver" is the parent object
+        // This will return a readable date whenever a job object is queried
+        date: (job) => job.createdAt.slice(0, 'yyyy-mm-dd'.length),
+        // This lets us query the company details of the job
+        company: (job) => getCompany(job.companyId)
+    },
+    Company: {
+        jobs: (company) => getJobsByCompany(company.id)
+    },
+};
+```
+
+Resolvers can be written as a separate module to keep the resolver mappings clean.
+
+```javascript
+export const resolvers = {
+  Query: {
+    jobs: jobResolver
+  }
+}
+
+export const jobResolver = (_root, args) => {
+  const { id } = args;
+};
+```
