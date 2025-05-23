@@ -1,0 +1,23 @@
+type Query {
+    """ Get all jobs posted to the board """
+    jobs: [Job!]
+    job(id: ID!): Job
+    company(id: ID!): Company
+}
+
+""" Represent a company that posted the job """
+type Company {
+    id: ID!
+    name: String!
+    description: String
+}
+
+""" Represents a job posted to the board """
+type Job {
+    id: ID!
+    """ The __date__ the job was posted in ISO-8601 format. Eg: `2025-05-23` """
+    date: String!
+    title: String!
+    company: Company!
+    description: String
+}

@@ -1,0 +1,9 @@
+{
+    "name": "graphql-101",
+    "private": true,
+    "type": "module",
+    "dependencies": {
+        "@apollo/server": "^4.12.1",
+        "graphql": "^16.11.0"
+    }
+}
