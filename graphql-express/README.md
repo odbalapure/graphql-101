@@ -103,3 +103,16 @@ export const jobResolver = (_root, args) => {
   const { id } = args;
 };
 ```
+
+## Error Handling
+
+The type definition must be handled carefully. Eg: making a field non-nullable can lead to an INTERNAL_SERVER_ERROR if the expected data is not found—even if there are no bugs in the code.
+
+```graphql
+type Query {
+  job(id: ID!): Job!
+}
+```
+
+In such cases the error needs to handled explicitly.
+
