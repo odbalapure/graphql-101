@@ -64,7 +64,7 @@ type Job {
 
 NOTE: Triple quote comments i.e. description comments help describe the schema at the code level as well as in the GraphQL client interface / sandbox / playround.
 
-### Creating resolvers
+## Creating resolvers
 
 ```javascript
 import { getJob, getJobs, getJobsByCompany } from "./db/jobs.js";
@@ -116,3 +116,54 @@ type Query {
 
 In such cases the error needs to handled explicitly.
 
+```javascript
+import { GraphQLError } from "graphql";
+
+export const resolvers = {
+    Query: {
+        job: async (_root, { id }) => {
+            const job = await getJob(id);
+            if (!job) {
+                throw new GraphQLError(`Job with id ${id} found`, {
+                  extensions: {
+                      code: 'NOT_FOUND',
+                  }
+              });
+            }
+            return job;
+        },
+    }
+}
+```
+
+## Input Types
+
+Creating a common "input" type instead of mentioning every single input variable.
+
+```graphql
+type Mutation {
+  createJob(input: CreateJobInput!): Job
+}
+
+input CreateJobInput {
+    title: String!
+    description: String
+}
+```
+
+Now the GraphQL mutation request will look like this
+
+```graphql
+mutation CreatJob($input: CreateJobInput!) {
+  createJob(input: $input) {
+    id
+    date
+    title
+    company {
+      id
+      name
+      description
+    }
+  }
+}
+```

@@ -1,4 +1,4 @@
-import { getJob, getJobs, getJobsByCompany } from "./db/jobs.js";
+import { createJob, getJob, getJobs, getJobsByCompany, deleteJob, updateJob } from "./db/jobs.js";
 import { getCompany } from "./db/companies.js";
 import { GraphQLError } from "graphql";
 
@@ -29,6 +29,14 @@ export const resolvers = {
     Company: {
         jobs: (company) => getJobsByCompany(company.id)
     },
+    Mutation: {
+        createJob: (_root, { input: { title, description } }) => {
+            const companyId = 'FjcJCHJALA4i'; // TODO: get companyId from access token
+            return createJob({ companyId, title, description });;
+        },
+        deleteJob: (_root, { id }) => deleteJob(id),
+        updateJob: (_root, { input: { id, title, description } }) => updateJob({ id, title, description }),
+    }
 };
 
 function notFoundError(message) {
