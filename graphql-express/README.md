@@ -136,6 +136,8 @@ export const resolvers = {
 }
 ```
 
+NOTE: A message property can also be used in the `extensions` object.
+
 ## Input Types
 
 Creating a common "input" type instead of mentioning every single input variable.
@@ -207,3 +209,29 @@ if (!context.auth) {
     })
 }
 ```
+
+NOTE: The context function can return a promise too.
+
+## Sending access token via client
+
+The token can be set in the `GraphQLClient` object as
+
+```javascript
+const client = new GraphQLClient("http://localhost:9000/graphql", {
+    headers: () => {
+        const accessToken = getAccessToken();
+        if (accessToken) {
+            return { Authorization: `Bearer ${accessToken}` };
+        }
+        return {};
+    }
+});
+```
+
+## Where to autenticate
+
+We should authenticate users with a separate login handler instead of doing it at the GraphQL level. Otherwise, we would have create a login resolver (getting username/password) and pass an access token to every resolver that requires authentication.
+
+We could authenticate users in the GraphQL context but the authentication logic should be decoupled.
+
+Authentication works on an underlying protocol in this case HTTP. GraphQL operates on top of HTTP. GraphQL is a query language. Due to this distincition auth should ideally happen before GraphQL resolver get involved.

@@ -30,16 +30,37 @@ export const resolvers = {
         jobs: (company) => getJobsByCompany(company.id)
     },
     Mutation: {
-        createJob: (_root, { input: { title, description } }, context) => {
-            if (!context.auth) {
+        createJob: (_root, { input: { title, description } }, { user }) => {
+            if (!user) {
                 throw unauthorisedError('Missing authentication');
             }
 
-            const companyId = 'FjcJCHJALA4i'; // TODO: get companyId from access token
+            const companyId = user.companyId;
             return createJob({ companyId, title, description });
         },
-        deleteJob: (_root, { id }) => deleteJob(id),
-        updateJob: (_root, { input: { id, title, description } }) => updateJob({ id, title, description }),
+        deleteJob: async (_root, { id }, { user }) => {
+            if (!user) {
+                throw unauthorisedError('Missing authentication');
+            }
+
+            const job = await deleteJob(id, user.companyId);
+            if (!job) {
+                throw notFoundError(`Job with id ${id} not found`);
+            }
+
+            return job;
+        },
+        updateJob: async (_root, { input: { id, title, description } }, { user }) => {
+            if (!user) {
+                throw unauthorisedError('Missing authentication');
+            }
+            const job = await updateJob({ id, title, description, companyId: user.companyId });
+            if (!job) {
+                throw notFoundError(`Job with id ${id} not found`);
+            }
+
+            return job;
+        },
     }
 };
 
