@@ -30,9 +30,13 @@ export const resolvers = {
         jobs: (company) => getJobsByCompany(company.id)
     },
     Mutation: {
-        createJob: (_root, { input: { title, description } }) => {
+        createJob: (_root, { input: { title, description } }, context) => {
+            if (!context.auth) {
+                throw unauthorisedError('Missing authentication');
+            }
+
             const companyId = 'FjcJCHJALA4i'; // TODO: get companyId from access token
-            return createJob({ companyId, title, description });;
+            return createJob({ companyId, title, description });
         },
         deleteJob: (_root, { id }) => deleteJob(id),
         updateJob: (_root, { input: { id, title, description } }) => updateJob({ id, title, description }),
@@ -45,4 +49,13 @@ function notFoundError(message) {
             code: 'NOT_FOUND',
         }
     });
+}
+
+function unauthorisedError(message) {
+    return new GraphQLError(message, {
+        extensions: {
+            code: 'UNAUTHORISED',
+            message: 'You must be logged in to create a job.'
+        }
+    })
 }

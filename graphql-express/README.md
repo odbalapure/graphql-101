@@ -167,3 +167,43 @@ mutation CreatJob($input: CreateJobInput!) {
   }
 }
 ```
+
+## Passing context
+
+```javascript
+const getContext = () => {
+  return { foo: "bar" }
+}
+
+app.use('/graphql', expressMiddleware(apolloServer, { context: getContext }));
+```
+
+Now the context object can be accessed in a resolver function
+
+```javascript
+createJob: (_root, { input: { title, description } }, context)
+```
+
+NOTE: The context function can also access the `req` object, since we are using **apollo express middleware**.
+
+If we consider an example of the `express-jwt` middleware that requires us to set the req.auth property. Otherwise an authorisation request should error out if its absent.
+
+```javascript
+// Setting the "auth" property
+const getContext = ({ req }) => {
+  return { auth: req.auth };
+}
+
+app.use('/graphql',
+  expressMiddleware(apolloServer, { context: getContext }));
+
+// Validatin the "auth" property in the resolver function
+if (!context.auth) {
+    throw new GraphQLError('Missing authentication', {
+        extensions: {
+            code: 'UNAUTHENTICATED',
+            message: 'You must be logged in to create a job.'
+        }
+    })
+}
+```

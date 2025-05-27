@@ -19,8 +19,12 @@ const typeDefs = await readFile('./schema.graphql', 'utf8')
 const apolloServer = new ApolloServer({ typeDefs, resolvers });
 await apolloServer.start();
 
+const getContext = ({ req }) => {
+  return { auth: req.auth };
+}
+
 // Use express middleware to handle GraphQL requests
-app.use('/graphql', expressMiddleware(apolloServer));
+app.use('/graphql', expressMiddleware(apolloServer, { context: getContext }));
 
 // Start express server
 app.listen({ port: PORT }, () => {
