@@ -222,3 +222,34 @@ export const jobByIdQuery = gql`
   }
 `;
 ```
+
+## Apollo Provider
+
+To fully utilize the functionalities provided by the apollo client, we use the `ApolloProvider` component.
+
+This lets us use the `useQuery` hook that provides extra state variables.
+
+```javascript
+export const companyByIdQuery = gql`
+  query CompanyById($id: ID!) {
+    company(id: $id) {
+      id
+      name
+      description
+      jobs {
+        id
+        date
+        title
+      }
+    }
+  }
+`;
+
+// Now the code looks much cleaner without the useEffect/useState hooks
+// Now we can remove every function that 
+const { data, loading, error } = useQuery(companyByIdQuery, {
+  variable: { id: companyId }
+});
+```
+
+## Custom Hook
