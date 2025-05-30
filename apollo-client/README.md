@@ -149,4 +149,76 @@ You can read more about the caching policies from [here](https://www.apollograph
 
 ## Cache manipulation
 
-We can write to the cache directly by
+We can write to the cache directly to avoid making extra network calls. We can use it for Optimistic UI Updates. Eg: Create a job and navigating to the jobs details page makes two API calls, one to create a job; another one to get the newly created job by ID.
+
+```javascript
+export async function createJob({ title, description }) {
+  const mutation = gql`...`;
+  const { data } = await apolloClient.mutate({
+    mutation,
+    variables: { input: { title, description } },
+    update: (cache, result) => {
+      cache.writeQuery(({
+        query: jobByIdQuery,
+        variables: { id: result.data.job.id },
+        data: result.data
+      }))
+    }
+  });
+  return data.job;
+}
+```
+
+This example writes the data to the cache, which our web app can use to display the job details job.
+
+
+## Fragments
+
+This is the feature of the schema definition language.
+
+```javascript
+// The "Job" type must match the type defined in the server's schema
+// It tells GraphQL which type the fields inside the fragment belong to
+fragment JobDescription on Job {
+  id
+  date
+  description
+  company {
+    name
+  }
+}
+
+// Using the fragement
+query JobById($jobId: ID!) {
+  job(id: $jobId) {
+    ...JobDescription
+  }
+}
+```
+
+And this is how we can use it in React:
+
+```javascript
+const jobDetailsFragment = gql`
+  fragment JobDetails on Job {
+    id
+    title
+    date
+    description
+    company {
+      id
+      name
+      description
+    }
+  }
+`;
+
+export const jobByIdQuery = gql`
+  ${jobDetailsFragment}
+  query GetJob($id: ID!) {
+    job(id: $id) {
+      ...JobDetails
+    }
+  }
+`;
+```
