@@ -1,18 +1,55 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { createJob } from '../lib/graphql/queries';
+// import { createJobMutation, jobByIdQuery } from '../lib/graphql/queries';
+// import { useMutation } from '@apollo/client';
+import { useCreateJob } from '../lib/graphql/hooks';
 
 function CreateJobPage() {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  // Built in mutation hook from Apollo Client
+  // const [mutate, { loading, error }] = useMutation(createJobMutation);
+
+  const { createJob, loading, error } = useCreateJob(title, description);
+
+  // const handleSubmit = async (event) => {
+  //   event.preventDefault();
+  //   // const job = await createJob({ title, description });
+  //   // Sending a mutation request to our graphql server
+  //   const { data: { job } } = await mutate({
+  //     // Payload to create a job
+  //     variables: { input: { title, description } },
+  //     update: (cache, result) => {
+  //       // Write to apollo client cache
+  //       cache.writeQuery(({
+  //         query: jobByIdQuery,
+  //         variables: { id: result.data.job.id },
+  //         data: result.data
+  //       }))
+  //     }
+  //   });
+
+  //   console.log('job created:', job);
+  //   navigate(`/jobs/${job.id}`);
+  // };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const job = await createJob({ title, description });
-    console.log('job created:', job);
+    const job = await createJob();
     navigate(`/jobs/${job.id}`);
-  };
+  }
+
+  if (error) {
+    return (
+      <div>
+        <div className="has-text-danger">
+          Error creating job, please try again later!
+        </div>
+        <a onClick={() => navigate('/')}>Home Page</a>
+      </div >
+    )
+  }
 
   return (
     <div>
@@ -43,7 +80,7 @@ function CreateJobPage() {
           </div>
           <div className="field">
             <div className="control">
-              <button className="button is-link" onClick={handleSubmit}>
+              <button className="button is-link" onClick={handleSubmit} disabled={loading}>
                 Submit
               </button>
             </div>

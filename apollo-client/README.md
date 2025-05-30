@@ -253,3 +253,87 @@ const { data, loading, error } = useQuery(companyByIdQuery, {
 ```
 
 ## Custom Hook
+
+We could create a custom hook and move this a separate module.
+We can customize the responses from `useQuery`, eg: as we did for `error`
+
+```javascript
+// Creating a custom Hook
+const useCompany = (id) => {
+  const { data, loading, error } = useQuery(companyByIdQuery, {
+    variables: { id }
+  });
+
+  return { company: data?.company, loading, error: Boolean(error) };
+}
+
+// Consuming the hook
+function CompanyPage() {
+  const { companyId } = useParams();
+  const { company, loading, error } = useCompany(companyId);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Data unavailable</div>;
+  }
+  return <></>
+}
+```
+
+## useMutation
+
+It does not send the request immediately, we only want to the send the request when the job creation succeeds.
+
+```javascript
+// Sending a mutation request to our graphql server
+const [mutate, result] = useMutation(createJobMutation);
+
+const { data: { job } } = await mutate({
+  // Payload to create a job
+  variables: { input: { title, description } },
+  update: (cache, result) => {
+    // Write to apollo client cache
+    cache.writeQuery(({
+      query: jobByIdQuery,
+      variables: { id: result.data.job.id },
+      data: result.data
+    }))
+  }
+});
+
+// Submit button
+<button className="button is-link" onClick={handleSubmit} disabled={loading}>Submit<button>
+```
+
+The 2nd object the useMutation returns can give us real time status of the mutation. Eg: We could use the `laoding` value to disable the SUBMIT button to avoid making duplicate mutation requests.
+
+We can create a custom mutation hook
+
+```javascript
+export const useCreateJob = (title, description) => {
+  const [mutate, { loading, error }] = useMutation(createJobMutation);
+  const createJob = async () => {
+    const { data: { job } } = await mutate({
+      variables: { input: { title, description } },
+      update: (cache, result) => {
+        cache.writeQuery(({
+          query: jobByIdQuery,
+          variables: { id: result.data.job.id },
+          data: result.data
+        }))
+      }
+    });
+
+    return job;
+  }
+
+  return {
+    createJob,
+    loading,
+    error: Boolean(error)
+  }
+};
+```
