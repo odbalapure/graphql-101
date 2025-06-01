@@ -59,7 +59,7 @@ Update the `codegen.json` and add a `config` object with `skipTypename` value.
 
 Using the auto generated default type for resolver cannot be used directly.
 
-```javascript
+```typescript
 import { Resolvers } from './generated/schema.js';
 
 export const resolvers: Resolvers
@@ -94,7 +94,7 @@ Now the IDE intellisense will tell the types on hover.
 
 ## Typing the context
 
-```javascript
+```typescript
 import DataLoader from 'dataloader';
 import { CompanyEntity, UserEntity } from './db/types.js';
 
@@ -112,5 +112,97 @@ We can also move the newly defined type to the graphql.ts
 ```json
 "config": {
     "contextType": "../resolvers#ResolverContext",
+}
+```
+
+## Client Code Generator
+
+You need add these two for client side code generation
+
+```yarn
+npm install @graphql-codegen/cli @graphql-codegen/client-preset
+```
+
+For client it generates multiple autogen type files hence we need to specify `src/generated`, instead of a single `graphql.ts`.
+
+codegen config for the client includes
+
+```json
+{
+    "overwrite": true,
+    "schema": "../server/schema.graphql",
+    "documents": "src/lib/graphql/queries.ts",
+    "generates": {
+        "src/generated/": {
+            "preset": "client",
+            "plugins": [],
+            "config": {
+                "skipTypename": true
+            }
+        }
+    }
+}
+```
+
+## Typed Queries
+
+The `src/generated` folder consists of the 
+```
+.
+├── fragment-masking.ts
+├── gql.ts
+├── graphql.ts
+└── index.ts
+```
+
+`graphql.ts` contains the code generated from the scehma.graphql file
+Whereas, the `gql.ts` contains code generated from the queries and mutation
+
+```typescript
+import { graphql } from '../../generated/gql';
+
+export const jobByIdQuery = gql`
+  query JobById($id: ID!) {
+    job(id: $id) {
+      ...JobDetail
+    }
+  }
+  ${jobDetailFragment}
+`;
+```
+
+NOTE:  
+- After hover you'll notice its a `TypedDocumentNode`.
+- Also its not mandatory to include fragement definition  as a variable i.e. `jobDetailFragment`.
+
+## Fragment Masking
+
+But using `graphql()` function has a problem, how you look at the components; you will see following errors on the props, eg:
+
+```typescript
+const job: {
+    ' $fragmentRefs'?: {
+        "JobDetailFragment": JobDetailFragment;
+    };
+}
+```
+
+When you use the graphql() function, it parses and registers the GraphQL fragments or operations at compile-time. However, without fragment masking, the generated types tend to be broad and rely on generic structures like $fragmentRefs, rather than giving you narrow, strongly-typed props specific to the component.
+
+More to read about this over [here](https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#fragment-masking).
+
+So, to distill the prop types specific to a component, fragment masking is necessary because `graphql()` function alone doesn't enforce field-level granularity.
+
+We can either to fragment masking using `useFragment` or update the codegen.json file:
+
+```json
+{
+    "generates": {
+        "src/generated/": {
+            "presetConfig": {
+                "fragmentMasking": false
+            }
+        }
+    }
 }
 ```
