@@ -96,3 +96,111 @@ Job: {
   date: (job) => toIsoDate(job.createdAt),
 },
 ```
+
+## Pagination
+
+It tells where the page begins, eg: for displaying 7 items in total; with 3 items per page; the 1st page starts at `offset=0`, 2nd one starts at `offset=3`, 3rd one starts at `offset=6`. This works well in most of the scenarios.
+
+But the drawback here is that **offset pagination** assumes the item listing never changes. What if someone posts a new job and the latest job needs to be on the top of the 1st page.
+
+NOTE: Cursor based pagination can fix this issue but its slightly more complex to implement.
+
+## Ordering data
+
+First query the data in descending order based on `createdAt` date.
+
+```javascript
+getJobTable().select().orderBy('createdAt', 'desc');
+```
+
+## Limit and offset
+
+```javascript
+export async function getJobs(limit, offset = 0) {
+  const query = getJobTable().select().orderBy('createdAt', 'desc');
+  if (limit) {
+    query.limit(limit);
+  }
+  if (offset) {
+    query.offset(offset);
+  }
+  // NOTE: The query will be executed when we resolve the promise using "await"
+  return await query;
+}
+```
+
+## Client side changes
+
+Now pass the offset and limit to the GraphQL queries
+
+```javascript
+const { data, loading, error } = useQuery(jobsQuery, {
+    variables: { limit, offset },
+    fetchPolicy: 'network-only',
+  });
+
+export const jobsQuery = gql`
+  query Jobs($limit: Int, $offset: Int) {
+    jobs(limit: $limit, offset: $offset) {
+    }
+  }`;
+```
+
+But we need to know the total no. of items to know where the pagination is supposed to stop.
+
+```graphql
+type Query {
+  company(id: ID!): Company
+  job(id: ID!): Job
+  jobs(limit: Int, offset: Int): JobSubList!
+}
+
+type JobSubList {
+  items: [Job!]!
+  totalCount: Int!
+}
+```
+
+For this you need to return the total job count
+
+```javascript
+export const countJobs = async () => {
+  // In Knex "first()" is shorthand for "limit(1)"
+  // It returns the first row of the result set
+  const { count } = await getJobTable().first().count('* as count');
+  return count;
+}
+```
+
+## Updating the component logic
+
+Create a state variable currentPage to keep track of the `offset`.
+
+```javascript
+function HomePage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const { jobs, loading, error } =
+    useJobs(JOBS_PER_PAGE, (currentPage - 1) * JOBS_PER_PAGE);
+
+  const totalPages = Math.ceil(jobs.totalCount / JOBS_PER_PAGE);
+  return (
+    <div>
+      <h1 className="title">
+        Job Board
+      </h1>
+      <div>
+        <button disabled={currentPage == 1} type="button" onClick={() => setCurrentPage(currentPage - 1)}>
+          Previous
+        </button>
+        &nbsp;
+        <span>[{currentPage} of {totalPages}]</span>
+        &nbsp;
+        <button disabled={totalPages === currentPage} type="button" onClick={() => setCurrentPage(currentPage + 1)}>
+          Next
+        </button>
+      </div>
+      <JobList jobs={jobs.items} />
+    </div>
+  );
+}
+```
