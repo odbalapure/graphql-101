@@ -67,4 +67,32 @@ DataLoader provides a memoization cache for all loads which occur in a single re
 
 DataLoader caching does not replace Redis/MemCache, or any other shared application-level cache. DataLoader is first and foremost a data loading mechanism, and its cache only servers the purpose of not repeatedly loading thesame data in the context of a single request to your Application. Inshort `load()` is a memoization function.
 
-Basically we wish to create a new DataLoader instance per request instaed of using the same (global) DataLoader instance to serve all the requests. 
+Basically we wish to create a new DataLoader instance per request instead of using the same (global) DataLoader instance to serve all the requests.
+
+```javascript
+export const createCompanyLoader = () => {
+  return new DataLoader(async (ids) => {
+    const companies = await getCompanyTable().select().whereIn('id', ids);
+    return ids.map((id) => companies.find((company) => company.id === id));
+  })
+};
+```
+
+Now we can call this function on every request
+```javascript
+// Passing the loader through the "context"
+async function getContext({ req }) {
+  const companyLoader = createCompanyLoader();
+  const context = { companyLoader }
+  if (req.auth) {
+    context.user = await getUser(req.auth.sub);
+  }
+  return context;
+}
+
+// Now consume the data loader function via "context"
+Job: {
+  company: (job, _args, { companyLoader }) => companyLoader.load(job.companyId),
+  date: (job) => toIsoDate(job.createdAt),
+},
+```
